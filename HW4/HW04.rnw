@@ -1,0 +1,330 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsfonts}
+
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{amsrefs}
+\usepackage{ulem}
+%\usepackage[dvips]{graphicx}
+\usepackage{color}
+\usepackage{cancel}
+
+\setlength{\headheight}{26pt}
+\setlength{\oddsidemargin}{0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8.5in}
+
+\topmargin 0pt
+%Forrest Shortcuts
+\newtheorem{defn}{Definition}
+\newtheorem{thm}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{pf}{Proof}
+\newtheorem{sol}{Solution}
+\newcommand{\R}{{\ensuremath{\mathbb R}}}
+\newcommand{\J}{{\ensuremath{\mathbb J}}}
+\newcommand{\Z}{{\mathbb Z}}
+\newcommand{\N}{{\mathbb N}}
+\newcommand{\T}{{\mathbb T}}
+\newcommand{\Q}{{\mathbb Q}}
+\newcommand{\st}{{\text{\ s.t.\ }}}
+\newcommand{\rto}{\hookrightarrow}
+\newcommand{\rtto}{\hookrightarrow\rightarrow}
+\newcommand{\tto}{\to\to}
+\newcommand{\C}{{\mathbb C}}
+\newcommand{\ep}{\epsilon}
+%CJ shortcuts
+\newcommand{\thin}{\thinspace}
+\newcommand{\beps}{\boldsymbol{\epsilon}}
+\newcommand{\bwoc}{by way of contradiction}
+
+%Munkres formatting?
+%\renewcommand{\theenumii}{\alph{enumi}}
+\renewcommand{\labelenumi}{\theenumi.}
+\renewcommand{\theenumii}{\alph{enumii}}
+\renewcommand{\labelenumii}{(\theenumii)}
+
+\title{HW04}
+\author{Guanlin Zhang}
+
+\lhead{Dr Byron J. Gajewski
+ \\BIOS 902} \chead{}
+\rhead{Guanlin Zhang\\ Fall '18} \pagestyle{fancyplain}
+%\maketitle
+
+\begin{document}
+Question 1: Exercise $4.1$, p.$217$, Carlin $\&$ Louis.
+\begin{sol}
+For part (a):\vskip 2mm
+  Given the hierarchical model:
+  \begin{align*}
+      Y_{ij}  = \beta_{0i} + \beta_{1i}(X_j - \mu_X) + \epsilon_{ij}, i = 1, \ldots, 365, j = 1, \ldots, 22,
+  \end{align*}
+  where $X_j = j, \mu_X = \frac{1}{22}\sum_{j = 1}^{22}X_j = 11.5$, $\epsilon_{ij} \stackrel{iid}{\sim} N(0, \tau)$, $\beta_{0i} \stackrel{iid}{\sim} N(\mu_0, \tau_0)$, and $\beta_{1i} \stackrel{iid}{\sim} N(\mu_1, \tau_1)$. Here $\tau, \tau_0$ and $\tau_1$ represent precisions.\vskip 2mm
+We fit the model in WinBUGS:
+\begin{center}
+  \includegraphics[width = 12cm]{Q1a_model.jpg}
+\end{center}
+For the choice of priors, we have:
+\begin{align*}
+  \mu_0 \sim \text{dflat}(), \mu_1 \sim \text{dflat}(), \tau \sim \text{dgamma}(0.001, 0.001)
+\end{align*}
+As for $\tau_0$ and $\tau_1$, we first consider the uniform prior for standard deviations:
+\begin{align*}
+  \text{sig0} \sim \text{dunif} (\frac{1}{A}, A), \text{sig1} \sim \text{dunif} (\frac{1}{A}, A)
+\end{align*}
+and then let
+\begin{align*}
+  \tau_0 = \frac{1}{\text{pow}(sig0, 2)} \text{ and } \tau_1 = \frac{1}{\text{pow}(sig1, 2)}
+\end{align*}
+I tried different values of $A$. For example, when $A = 10$, the uniform prior is $U(0.1, 10)$ and we find that the density of sig1 exhibits a "truncated" shape:
+\begin{center}
+  \includegraphics[width = \textwidth]{Q1a_densityA10.jpg}
+\end{center}
+This indicates that $A$ is not large enough. Eventually we chose $A = 1000$, and it looks much better on the density plot:
+\begin{center}
+  \includegraphics[width = \textwidth]{Q1a_densityA1000.jpg}
+\end{center}
+On the other hand, we also considered the choice of flat prior directly on $\tau_0$ and $\tau_1$:
+\begin{align*}
+  \tau_0 \sim \text{dgamma}(0.001, 0.001) \text{ and } \tau_1 \sim \text{dgamma}(0.001, 0.001)
+\end{align*}
+It turns out, the point estimate, as well as the $95\%$ credible intervals are quite close to the results we got from using the uniform prior on $\tau_0$ and $\tau_1$. \vskip 2mm
+From uniform prior on sig0 and sig1:
+\begin{center}
+  \includegraphics[width = 12cm]{Q1a_nodes_uniformprior.jpg}
+\end{center}
+From flat prior on $\tau_0$ and $\tau_1$:
+\begin{center}
+  \includegraphics[width = 12cm]{Q1a_nodes_flatprior.jpg}
+\end{center}
+Throughout the rest of solution for Question $1$, we generate results using the uniform prior for sig0 and sig1, per suggestion from class, as well as by Gelman.\vskip 2mm
+We also consider three chains to help better assess convergence. We simulate $10000$ times for each chain, after burning the first $10000$ iterations.\vskip 2mm
+For point estimates and credible intervals, all $3$ chains give similar results:
+\begin{center}
+  \includegraphics[width = 12cm]{Q1a_nodes_3chains.jpg}
+\end{center}
+For trace plot to check convergence, all three chains indicate a good sign of convergence.
+\begin{center}
+  \includegraphics[width = \textwidth]{Q1a_traces_3chains.jpg}
+\end{center}
+and all three chains have similar density plots for the parameters:
+\begin{center}
+  \includegraphics[width = \textwidth]{Q1a_densities_3chains.jpg}
+\end{center}
+The above plots indicates that the convergence is good, and our results from different chains are consistent.\vskip 2mm
+We can also look at DICs (for separate chains): they are also pretty close as well.
+\begin{center}
+  \includegraphics[width = 10cm]{Q1a_DIC_chain1.jpg}
+\end{center}
+\begin{center}
+  \includegraphics[width = 10cm]{Q1a_DIC_chain2.jpg}
+\end{center}
+\begin{center}
+  \includegraphics[width = 10cm]{Q1a_DIC_chain3.jpg}
+\end{center}
+Since there are $365$ estimates for each $\beta_0$ and $\beta_1$, we did not show them here. To interpret though, the posterior distribution of $\mu_1$ means the mean (or average) rate of change for HGB among all patients posteriori, and the posterior distribution of $\beta_{1i}$ means the individual rate of change of HGB of a specific patient posteriori.\vskip 2mm
+  We now use compare function in winBUGS to generate boxplot and caterpillar plot for $\beta_1$. Since there are $365$ of them, it would be hard to observe if we put all patients information in one plot. Instead we group them by every 50 patients:\vskip 2mm
+  For $\beta_1[1]$ to $\beta_1[50]$:
+  \begin{center}
+  \includegraphics[width = \textwidth]{Q1a_compare1_50.jpg}
+\end{center}
+  For $\beta_1[51]$ to $\beta_1[100]$
+  \begin{center}
+  \includegraphics[width = \textwidth]{Q1a_compare51_100.jpg}
+\end{center}
+For $\beta_1[101]$ to $\beta_1[150]$
+  \begin{center}
+  \includegraphics[width = \textwidth]{Q1a_compare101-150.jpg}
+\end{center}
+For $\beta_1[151]$ to $\beta_1[200]$
+  \begin{center}
+  \includegraphics[width = \textwidth]{Q1a_compare151-200.jpg}
+\end{center}
+For $\beta_1[201]$ to $\beta_1[250]$
+  \begin{center}
+  \includegraphics[width = \textwidth]{Q1a_compare201-250.jpg}
+\end{center}
+For $\beta_1[251]$ to $\beta_1[300]$
+  \begin{center}
+  \includegraphics[width = \textwidth]{Q1a_compare251-300.jpg}
+\end{center}
+For $\beta_1[301]$ to $\beta_1[365]$
+  \begin{center}
+  \includegraphics[width = \textwidth]{Q1a_compare301-365.jpg}
+\end{center}
+As we can easily observe that, for some patients i, the rate of change $\beta_{1i} > 0$ and for some others $\beta_{1i} < 0$. Some have their whole $95\%$ credible interval positive, for example, patients $202, 209$, and some have their whole $95\%$ credible interval negative, for example, patients $201, 212, 214$ etc. So not all participants HGB measurements are improving over time.\vskip 2mm
+For part $(b)$:\vskip 2mm
+We get the following estimates for patient number 10 (same code as part (a), but add $\text{HGB}[10, ]$ as the stochastic node that we monitor):
+\begin{center}
+  \includegraphics[width = 14cm]{Q1b_sd.jpg}
+\end{center}
+Notice that HGB increase slowly in time, which is consistent with the estimate for $\beta_{1, 10}$ that is positive.\vskip 2mm
+The estimated standard deviations of the imputed valuesincrease for the later weeks (goes from around $1.00$ to around $1.20$), after the participant was lost to follow-up; uncertainty increases as we move further from the bulk of the data.\vskip 2mm
+For part $(c)$:\vskip 2mm
+We improve the model as following:
+\begin{align*}
+  Y_{ij} &= \beta_{0i} + \beta_{1i}(X_j - \mu_X) + \epsilon_{ij}, i = 1, \ldots, 365, j = 1, \ldots, 22
+\end{align*}
+where $X_j = j$, $\epsilon_{ij} \stackrel{iid}{\sim} N(0, \tau)$ and
+\begin{align*}
+    \beta_{0i} &\stackrel{iid}{\sim} N(\mu_0 + \gamma_0 \cdot (\text{newarm}[i] - 1), \tau_0)\\
+    \beta_{1i} &\stackrel{iid}{\sim} N(\mu_1 + \gamma_1 \cdot (\text{newarm}[i] - 1), \tau_1)
+\end{align*}
+That is to say, for those participants in $\text{newarm}[i] = 1$, we have:
+\begin{align*}
+    \beta_{0i} &\stackrel{iid}{\sim} N(\mu_0, \tau_0)\\
+    \beta_{1i} &\stackrel{iid}{\sim} N(\mu_1, \tau_1)
+\end{align*}
+for those participants in $\text{newarm}[i] = 2$, we have:
+\begin{align*}
+    \beta_{0i} &\stackrel{iid}{\sim} N(\mu_0 + \gamma_0, \tau_0)\\
+    \beta_{1i} &\stackrel{iid}{\sim} N(\mu_1 + \gamma_1, \tau_1)
+\end{align*}
+For priors, we still take $\mu_0 \sim \text{dflat}(), \mu_1 \sim \text{dflat}()$, $\tau \sim \text{dgamma}(.001, .001)$, $\sigma_0 \sim \text{dunif}(.001, 1000)$, $\sigma_1 \sim \text{dunif}(.001, 1000)$, and we take $\gamma_0 \sim \text{dnorm}(0, .0001)$ and $\gamma_1 \sim \text{dnorm}(0, .0001)$.\vskip 2mm
+The code for the improved model is:
+\begin{center}
+  \includegraphics[width = 10cm]{Q1c_model.jpg}
+\end{center}
+The trace plot and density plot is:
+\begin{center}
+  \includegraphics[width = \textwidth]{Q1c_convergence.jpg}
+\end{center}
+The convergence seems to be doing pretty well.(we burned first $10000$ iterations.)\vskip 2mm
+The estimate and DIC is:
+\begin{center}
+  \includegraphics[width = 12cm]{Q1c_estimate.jpg}
+\end{center}
+The DIC is very close to the reduced model (slightly smaller than all three DICs from different chains), this suggests that we may not really need the "complete" model here.\vskip 2mm
+From the estimates we see that $\gamma_0$($-0.29$) and $\gamma_1$($-0.02$) are both significantly negative, but compared to the grand intercept ($\mu_0 = 11.74$) and slope ($\mu_1 = 0.10$) without treatment effect, the difference is not very significant.\vskip 2mm
+The following R code plot graphs of fitted grand means and observed grand means between treatment groups. (I call those with newarm$[i] = 1$ as control and those with newarm$[i] = 2$ as treatment).
+<<tidy = FALSE, fig.align='center', out.width='50%'>>=
+#HW4
+
+#Question 1
+
+library(ggplot2)
+
+X <- c(1:22); meanX <- mean(X); N <- 365; Time <- 22
+mu0 <- 11.74; mu1 <-0.1017; gamma0 <- -0.2923; gamma1 <- -0.02348
+
+Control <- function(x){
+  d <-mu0 +mu1*(x - meanX)
+}
+Treatment <- function(x){
+  d <- mu0 + gamma0 + (mu1 + gamma1)*(x - meanX)
+}
+
+p <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+  stat_function(fun=Control, geom="line", aes(colour="Control")) +
+  stat_function(fun=Treatment, geom="line", aes(colour="Treatment")) + 
+  labs(y = "HGB") + 
+  #theme_grey() +
+  scale_x_continuous(limits = c(1, 22)) +
+  #scale_y_continuous(limits = c(10.5, 13.5))
+  scale_color_manual(name = "Fitted Group Means",
+                     values = c("blue", "red"), # Color specification
+                     labels = c("Control", "Treatment"))
+
+#read in the raw data of Question 1
+Q1data <- read.table("C:\\akira\\data\\Q1_rawdata.txt", header = FALSE)
+
+#create the data frame to be used in ggplot
+Q1data_control <- subset(Q1data, Q1data$V1 == 1)
+Q1data_treatment <- subset(Q1data, Q1data$V1 == 2)
+Observed_control <- colMeans(Q1data_control, na.rm = TRUE)
+Observed_treatment <- colMeans(Q1data_treatment, na.rm = TRUE)
+Observed_control <- Observed_control[2:23]
+Observed_treatment <- Observed_treatment[2:23]
+Q1observed <- data.frame("Control" = Observed_control, 
+                         "Treatment" = Observed_treatment, 
+                         x = 1:22)
+library(tidyr)
+Q1observed_long <- gather(Q1observed, Treatment, HGB, 
+                          Control:Treatment, factor_key = TRUE)
+p2 <- ggplot(Q1observed_long, mapping = aes(x = x, y = HGB, colour = Treatment)) + 
+      geom_line() + scale_x_continuous(limits = c(1, 22)) +
+      scale_color_manual(name = "Observed Group Means",
+                     values = c("blue", "red"), # Color specification
+                     labels = c("Control", "Treatment"))
+library(gridExtra)
+
+grid.arrange(p2, p, nrow = 2)
+@
+As we can see from the plot that the two groups are pretty close at baseline, but due to the different slopes the treatment effects are different over the time.
+\end{sol}
+
+Question 2. Parts $(a)$ and $(c)$ of Exercise $4.5$, p.$220$, Carlin $\&$ Louis.
+\begin{sol}
+  For part $(a)$:\vskip 2mm
+  Our model is:
+  \begin{align*}
+    \text{logit}(p_i) &= \beta_0 + \beta_1 X_i, i = 1, \ldots, n
+  \end{align*}
+  with $n = 602$. Follow the code from example $4.4$, we also centralize X so the model becomes 
+  \begin{align*}
+    \text{logit}(p_i) &= \beta_0 + \beta_1 (X_i - \text{mean}(X))
+  \end{align*}
+  The winBUGs code is:
+  \begin{center}
+    \includegraphics[width = 8cm]{Q2_model.jpg}
+  \end{center}
+  We burn the first $10000$ iterations, got the following output:
+  \begin{center}
+    \includegraphics[width = 12cm]{Q2_output_logit.jpg}
+  \end{center}
+  From the trace and density plot we think the convergence is done very well.  The estimate of $\beta_1$ is $-1.718$ with $95\%$ credible interval as $(-2.112, -1.344)$. This tells that $\beta_1$ is significantly negative. (If the log odds has negative rate of change, so is the odds. This is to say that as the distance to the forest edge increase, the odds of two species co-presence decrease.)\vskip 2mm
+  Now for part (c), replace logit link with the complementary log-log link $log[-log(1 - p_i)]$. The code is the same as above except we comment out the line for logit link and use the line for complementary log-log link.\vskip 2mm
+  The output is as following (burn first $10000$ iterations, then sample $10000$ more times):
+  \begin{center}
+    \includegraphics[width = 12cm]{Q2_output_loglog.jpg}
+  \end{center}
+  So the estimate for $\beta_1$ is $-1.248$, with $95\%$ credible interval as $(-1.516, -0.989)$. Thus under the complementary log-log link, $\beta_1$ is also significantly negative.\vskip 2mm
+  The DIC of these two models are quite close ($728.408$ and $729.510$), hence the DIC is not particularly in favor of either one.\vskip 2mm
+  The following R code plot the two fitted regression lines and compare:
+<<tidy = FALSE, fig.align='center', out.width='50%', message = FALSE>>=
+#Question 2.
+Q2data <- read.table("C:\\akira\\data\\copresence.txt", header = TRUE)
+
+Xmean <- mean(Q2data$X)
+
+beta01 <- -0.4045; beta11 <- -1.718 #logit link
+beta02 <- -0.7148; beta12 <- -1.248 #log-log link
+
+library(gtools)#for logit and inv.logit
+library(LaplacesDemon) #for cloglog and invcloglog
+
+logit <- function(x){
+  d <- inv.logit(beta01 + beta11*(x - Xmean))
+}
+loglog <- function(x){
+  d <- invcloglog(beta02 + beta12*(x - Xmean))
+}
+
+p2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) + #create dummy dataset
+  stat_function(fun=logit, geom="line", aes(colour="logit")) +
+  stat_function(fun=loglog, geom="line", aes(colour="complementary log-log")) + 
+  labs(y = "P(co-presence)") + 
+  #theme_grey() +
+  scale_x_continuous(limits = c(0.1, 5)) +
+  #scale_y_continuous(limits = c(10.5, 13.5))
+  scale_color_manual(name = "link functions",
+                     values = c("blue", "red"), # Color specification
+                     labels = c("logit", "complementary log-log"))
+p2
+@
+As we can see that the two lines are pretty close to each other, which is consistent with our information from DIC that not any one of these two models are favored more than the other.
+\end{sol}
+
+
+
+
+
+
+
+
+
+\end{document}
