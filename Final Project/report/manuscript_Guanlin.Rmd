@@ -1,0 +1,284 @@
+---
+title: A Safety Signal Analysis with Three-Level Hierarchical Mixture Model
+author:
+- name: Guanlin Zhang*
+  num: a
+address:
+- num: a
+  org: Department of Biostatistics, University of Kansas Medical Center, Kansas City
+corres: "*\\email{gzhang2@kumc.edu}"
+# presentaddress: 
+authormark: Guanlin Zhang
+articletype: Final Project Report
+header-includes:
+    - \usepackage{setspace}\doublespacing
+# received: 2017-01-01
+# revised: 2017-02-01
+# accepted: 2017-03-01
+abstract: "In this manuscript we follow the footsteps of others[@Berry2004] and fit a three-level hierarchical mixture model into a dataset featuring adverse effects of trials across different body systems, and make inference on the comparison of treatment and control groups."
+keywords: Safety Signal, Three-Level Hierarchical model, Adverse Effects(AEs), Body Systems, Multiplicities;
+bibliography: bibfile.bib
+output: rticles::sim_article
+---
+
+# Introduction
+  
+To our example we are going to apply a three-level hierarchical mixture model, proposed by Berry $\&$ Berry[@Berry2004]. The reference literature was initially produced in order to address the multiplicity issues when considering potentially drug-caused adverse effects across and within different body systems. 
+
+The idea is to model different adverse effects during drug trials both across and within the body systems with a Bayesian approach through a three-level hierarchical model, that way we could make posteior inferences on the AEs simultaneously without losing power as the frequentists perspecitve would on this matter. For details we refer to our main reference[@Berry2004].
+
+Here we are just going to introduce the model proposed by Berry$\&$Berry.
+
+
+#Model
+
+Assuming in a drug trial we have control (total number $N_c$) and treatment (total number $N_t$) groups. Suppose there are $B$ body systems and within body system $b$ there are $k_b$ types of AEs labeled $A_{bj}$, where $b = 1, \ldots, B$ and $j = 1 \ldots, k_b$. Of the $N_c$ controls, $X_{bj}$ experience $A_{bj}$ and of the $N_T$ patients in the treatment group, $Y_{bj}$ experience $A_{bj}$. The probabilities of experiencing $A_{bj}$ are $c_{bj}$ and $t_{bj}$ for control and treatment patients, respectively[@Berry2004]. We use logistic transformations:
+\begin{align*}
+  \gamma_{bj} &= \log\Big(\frac{c_{bj}}{1 - c_{bj}}\Big)  \text{\  and \ } \theta_{bj} = \log\Big (\frac{t_{bj}}{1 - t_{bj}}\Big) - \gamma_{bj}
+\end{align*}
+So given the data $X_{bj}$ and $Y_{bj}$, there is:
+\begin{align*}
+  X_{bj} \sim \text{Bin}(c_{bj}, N_c)  \text{\  and \ } Y_{bj} \sim \text{Bin}(t_{bj}, N_t)
+\end{align*}
+Here $\gamma_{bj}$ and $\theta_{bj}$ are level $1$ prior parameters and we assume:
+\begin{align*}
+  \gamma_{bj} \sim N(\mu_{\gamma b}, \sigma^2_{\gamma}) \hskip 1cm \text{ for }b = 1, \ldots, B \text{ and } j = 1, \ldots, k_b.
+\end{align*}
+For $\theta_{bj}$ it represents the log odds ratio of AEs in treatment group versus in control group. It is modeled with a mixture prior distribution that
+\begin{align*}
+  \theta_{bj} &\sim \pi_b I_{[0]} + (1 - \pi_b)N(\mu_{\theta b}, \sigma^2_{\theta b}) \hskip 1cm \text{ for }b = 1, \ldots, B; j = 1, \ldots, k_b.
+\end{align*}
+The above expression can also be equivalently phrased as:
+\begin{align*}
+  \theta_{bj} &= (1 - \text{mix}_{1, bj})\times \text{mix}_{2, bj} 
+\end{align*}
+with 
+\begin{align*}
+  \text{mix}_{1, bj} \sim \text{Bernoulli}(\pi_b) \text{ and } \text{mix}_{2, bj} \sim N(\mu_{\theta b}, \sigma^2_{\theta b})
+\end{align*}
+We take this form in our OpenBUGS coding later on.\vskip 2mm
+Now for the second level prior parameters we have $\mu_{\gamma b}$, $\sigma^2_{\gamma}$, $\pi_b$, $\mu_{\theta b}$, and $\sigma^2_{\theta b}$. Assume:
+\begin{align*}
+  \mu_{\gamma b} \sim N(\mu_{\gamma 0}, \tau^2_{\gamma 0}) \text{ for }b = 1, \ldots, B \text{ and } \sigma^2_{\gamma} \sim \text{IG}(\alpha_{\sigma \gamma}, \beta_{\sigma, \gamma})  
+\end{align*}
+we also have
+\begin{align*}
+  \pi_b \sim \text{Beta}(\alpha_{\pi}, \beta_{\pi}), b = 1, \ldots, B
+\end{align*}
+Here the $\pi_b$ depends on the body systems, so the model considers different probabilities of having same AE effect between control and treatment group in different body systems.\vskip 2mm
+We also have
+\begin{align*}
+  \mu_{\theta b} \sim N(\mu_{\theta 0}, \tau^2_{\theta 0}) \text{ for } b = 1, \ldots, B     \text{ and }  \sigma^2_{\theta b} \sim \text{IG}(\alpha_{\theta}, \beta_{\theta}).
+\end{align*}
+Finally for the third level prior parameters, we have $\mu_{\gamma 0}$, $\tau^2_{\gamma 0}$, $\alpha_{\pi}$, $\beta_{\pi}$, $\mu_{\theta 0}$ and $\tau^2_{\theta 0}$. We assume:
+\begin{align*}
+  \mu_{\gamma 0} \sim N(\mu_{\gamma 0 0}, \tau^2_{\gamma 0 0}) \text{ and } \tau^2_{\gamma 0} \sim \text{IG} (\alpha_{\tau \gamma}, \beta_{\tau \gamma}).
+\end{align*}
+For $\alpha_{\pi}$ and $\beta_{\pi}$ as the hyper parameter of $\pi_b$ in the beta distribution, we restrict them to be $ > 1$ and assume a left truncated exponential distribution:
+\begin{align*}
+  \alpha_{\pi} \sim \frac{\lambda_{\alpha}\exp(-\alpha \lambda_{\alpha})}{\exp(-\lambda_{\alpha})}I_{[\alpha > 1]} \text{ and } \beta_{\pi} \sim \frac{\lambda_{\beta}\exp(-\beta \lambda_{\beta})}{\exp(-\lambda_{\beta})}I_{[\beta > 1]}
+\end{align*}
+The reason of doing so is explained in detail, see (Berry $\&$ Berry 2004)[@Berry2004].
+
+For constants in the model it is assumed as $\mu_{\theta 0 0} = 0, \tau^2_{\theta 0 0} = 10$, $\alpha_{\theta} = 3$, $\beta_{\theta} = 1$, $\alpha_{\theta 0} = 3$, $\beta_{theta 0} = 1$, $\alpha_{\tau \gamma} = 3$, $\beta_{\tau \gamma} = 1$, $\alpha_{\sigma \gamma} = 3$, $\beta_{\sigma \gamma} = 1$ and $\lambda_{\gamma} = \lambda_{\beta} = 1$.
+
+Figure \ref{fig:doodle} provides an OpenBUGS doodle that helps with seeing the hierarchical structure. The variables inside eclipses are either stochastic or logical node, and those in rectangles are constants.
+
+\begin{figure}[ht]
+  \begin{center}
+    \includegraphics[width = \textwidth]{doodle.jpg}
+  \end{center}
+  \caption{OpenBUGS doodle for the hierarchical model}\label{fig:doodle}
+\end{figure}
+
+The notation we use in OpenBUGs is consistent with our reference literature, except that to avoid transform between precision and variance, everywhere where there is notation for variance in the paper, we use it as precision in our code. For example, when the paper mention $\tau^2_{0 0} = 10$, we put it as $\tau^2_{0, 0} = 0.1$ in the OpenBUGs code\vskip 2mm
+
+
+
+#Analysis
+
+We proceed the analysis with a few steps. We first fit the data presented by our reference[@Berry2004] in OpenBUGs. In the meantime, to check consistency, we also utilize an R package to do the same job, and we compare between both results, and also with those presented by the paper. Then we fit the three-level hierarchical model to a different set of data in winBUGS, and we compare the results with an independent model.
+
+##Fit data from Berry(2004)[@Berry2004] by WinBUGS and R separately
+
+The reference paper[@Berry2004] present the data as shown in Figure \ref{fig:berry_data}:
+\begin{figure}
+  \centering
+    \includegraphics[width = 12cm]{berry_data.jpg}
+  \caption{Data from Berry $\&$ Berry's paper}\label{fig:berry_data}
+\end{figure}
+
+and the results are partially presented in the paper (we are mainly interested in the posterior $\theta > 0$ probability since it reflects drug effects on AEs) as shown in Figure \ref{fig:berry_results}
+
+\begin{figure}[ht]
+  \centering
+    \includegraphics[width = 12cm]{berry_results.jpg}
+  \caption{Berry $\&$ Berry's paper results}\label{fig:berry_results}
+\end{figure}
+
+The original authors are particularly interested in the $4$ AEs that are significant in the Fisher-exact test since we want to know how the Bayesian hierarchical model concludes differently. Table \ref{tab:berry_results} presents the results:
+
+\begin{table}[ht]
+\centering
+
+\begin{tabular}{|l|c|c|c|}
+\hline
+  AEs & Index & $\theta > 0$ & Fisher exact p\\
+\hline
+ Irritability & $\theta_{8, 3}$ & $0.780 $ & $0.003$\\
+ Diarrhea &  $\theta_{3, 4}$ & $0.231$ & $0.029$\\
+  Rash & $\theta_{10, 4}$ & $0.19$ & $0.021$\\
+   Rash, measles /rub-like & $\theta_{10, 6}$ & $0.126$ & $0.039$\\
+\hline
+\end{tabular}
+\caption{Fisher exact test vs Posterior probability}\label{tab:berry_results}
+\end{table}
+
+The key argument made by Berry $\&$ Berry is that the order of Fisher exact p values on these four AEs are not the same as the order of the posterior probability $\theta > 0$, and that is due to the reason that Fisher exact test only focus on individual AE while the hierarchicao model takes into account the body system factor.\vskip 2mm
+
+While I agree with the authors, our OpenBugs and R both return similar results to each other but different than those presented in the paper.
+
+Particularly, we did our own OpenBugs code based on the model, while the R result actually comes from a package named "c212", which is developed by Dr Raymond Carragher from Strathclyde Institute of Pharmacy and Biomedical Sciences.
+
+For OpenBugs we burned $1,000$ iterations and take the next $10, 000$ updates, then we extract the coda information of $\theta$ and compute the mean number of $\theta$s of interest that is positive to estimate the posterior $P(\theta > 0)$. For R the package will also generate point estimate for $\theta$ and we compute the posterior $P(\theta > 0)$ in the same way.\vskip 2mm
+
+Figure \ref{fig:berry_trace} and Figure \ref{fig:berry_history} shows the trace and history plot from OpenBUGS iteration. Graphs show that our model converges all right.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width = 12cm]{berry_trace.jpg}
+  \caption{Trace Plot from OpenBugs}\label{fig:berry_trace}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width = 12cm]{berry_history.jpg}
+  \caption{Trace Plot from OpenBugs}\label{fig:berry_history}
+\end{figure}
+
+Table \ref{tab:berry_compare} presents the comparison among the three for the four AEs:
+
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{|l|c|c|c|c|c|}
+  \hline
+  \cline{1-2}\cline{3-5}
+  \multicolumn{2}{|c|}{}& \multicolumn{3}{|c|}{post $P(\theta > 0)$} & \\
+    \hline
+  AEs& Type & Reference & OpenBugs & R & Fisher exact p\\
+    \hline
+    Irritability & $\theta_{8, 3}$ & $0.78$ & $0.978$ & $0.984$ & 0.003\\
+    Diarrhea &  $\theta_{3, 4}$ & $0.231$ & $0.847$ & $0.853$  & 0.029\\
+    Rash & $\theta_{10, 4}$ & $0.19$ & $0.945$ & $0.993$ & 0.021\\
+    Rash, measles/rub-like & $\theta_{10, 6}$ & $0.126$ & $0.890$ & $0.946$ & 0.039\\
+  \hline
+  \end{tabular}
+  \caption{OpenBugs and R results compare with reference}\label{tab:berry_compare}
+\end{table}
+From table \ref{tab:berry_compare} we can conclude the following:
+\begin{enumerate}
+  \item OpenBUGs and R return similar estiamtes on posterior probability of treatment effects on AEs, but different than the original reference paper. Our analysis suggests that for all four adverse effects, there is a significant effect from the treatment (high probability of $\theta > 0$).
+  \item Posterior probability of treatment effect on irritability is strong, consistent with Fisher exact test.In the mean time, due to body system effect the extent of treatment effect for these adverse effects are not completely in the same order as the p values from Fisher exact tests, although the difference is nearly ignorable.  
+\end{enumerate}
+We argue that since the original paper was published in $2004$ and over the time the computational software has evolved tremendously, the result from the original paper may be subject to further verification. 
+
+##Fit the new example with both OpenBUGs and R and compare with an independent model
+
+Figure \ref{fig:data} presents a new set of data, similar to the one from our main reference [@Berry2004]:
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width = 12cm]{data.jpg}
+  \caption{Safety Signal Data}\label{fig:data}
+\end{figure}
+
+We fit the data with winBUGS and R. For the winBUGS part this time we also fit an independent model, which means that every $\gamma_{bj}$ and $\theta_{bj}$ has its own normal prior distribution. Figure \ref{fig:doodle_ind} shows an OpenBUGS doodle version of the model:
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width = 10cm]{doodle_ind.jpg}
+  \caption{OpenBugs doodle for Independent Model}\label{fig:doodle_ind}
+\end{figure}
+
+Table \ref{tab:newcompare} compares the posterior probability $P(\theta > 0)$ between winBUGS results for hierarchical and independetn model, and also the R package output for the hierarchical model.
+
+
+From Table \ref{tab:newcompare} we conclude that when using hierarchical model we tends to be more conservative about claiming that there is a treatment effect on the adverse effects. Both OpenBUGS and R gave similar results to the posterior probability $P(\theta > 0)$. 
+
+
+However the independent model gives in general larger values of this probability, if we focus on comparing row by row. When using independent model, we are considering each AE without taking into consideration of body system, so this is essentially in the same spirit of making inference with fisher exact test on each individual adverse effect.
+
+
+Take some observations for example, for "Other HNMB AEs", the hierarchical models give a posteior probability fairly small ($0.046$ from R and $0.053$ from OpenBUGS), while the independent model gives a value up to $0.20$. 
+
+
+Should we claim a treatment effect on this particular AE? In this case the posteior probability is pretty small even for independent model. So the answer is probably no.
+
+
+Suppose the posterior probability is quite large for independent model, say pass over $0.5$, but the value given by hierarchical model is pretty small, then we need to think over before making a decision. What seems to be a treatment effect might actually be caused by the body system itself.
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+  \hline
+  \cline{2-4}
+  \multicolumn{1}{c}{} & \multicolumn{3}{|c|}{post $P(\theta > 0)$}\\
+  \hline
+  AE & R(Hierarchical)& OpenBUGS(Hierarchical)& OpenBUGS(Independent)\\
+  \hline
+  Arrhythmia &$0.0207$& $0.0267$ & $0.0496$\\
+  Increased BP&$0.0487$& $0.0591$ & $0.0939$\\
+  Other CB AEs &$0.0136$& $0.0237$ & $0.0227$\\
+  Pre-eclampsia &$0.0763$& $0.1102$ & $0.1058$\\
+  \hline
+  Emesis&$0.0258$& $0.0264$ & $0.0457$\\
+  Other GI AEs&$0.022$& $0.0249$ & $0.0463$\\
+  \hline
+  Depression&$0.0229$& $0.0275$ & $0.0464$\\
+  Headache &$0.0232$& $0.0301$& $0.0508$\\
+  Other HNMB AEs&$0.046$& $0.0529$ & $0.2012$\\
+  \hline
+  Gestational Diabetes Mellitus &$0.0763$& $0.0961$ & $0.2920$\\
+  Other MAN AEs&$0.0331$& $0.0341$ & $0.0476$\\
+  \hline
+  Chorioamnionitis&$0.0061$& $0.0156$ & $0.0240$\\
+  Decreased Fetal Movement &$0.0199$& $0.0281$ & $0.0661$\\
+  Endomyometritis &$0.037$& $0.0413$& $0.1984$\\
+  Miscarriage &$0.0062$& $0.0194$ & $0.0493$\\
+  Other PD AEs &$0.0634$& $0.0718$ & $0.2238$\\
+  Postpartum Hemorrhage &$0.0309$& $0.0406$ & $0.1871$\\
+  Premature Delivery &$0.0486$& $0.0671$ & $0.0708$\\
+  Premature ROM &$0.0059$& $0.0109$ & $0.0045$\\
+  Preterm Contractions &$0.0186$& $0.0331$ & $0.0434$\\
+  \hline
+  Other RESP AEs &$0.0113$& $0.0232$ & $0.0472$\\
+  Shortness of Breath &$0.0105$& $0.0251$ & $0.0474$\\
+  \hline
+  Other UG AEs &$0.0466$& $0.0508$ & $0.1887$\\
+  Pyelnephritis &$0.0254$& $0.0313$ & $0.0272$\\
+  Urinary Tract Infection &$0.0466$& $0.0452$ & $0.1047$\\
+  Vaginal Bleeding &$0.0402$& $0.0473$ & $0.1046$\\
+  \hline
+  Abdominal Pain &$0.0335$& $0.0434$ & $0.0616$\\
+  Other BODY AEs &$0.0125$& $0.0213$ & $0.0118$\\
+  PD012 &$0.0502$& $0.074$ & $0.2885$\\
+  Pelvic Pain &$0.0414$& $0.0542$ & $0.1897$\\
+  Polyhydramnios& $0.0198$& $0.0268$& $0.0483$\\
+  \hline
+\end{tabular}
+  \caption{hierarchical model vs independent model, and winBUGS vs R}\label{tab:newcompare}
+\end{center}
+\end{table}
+
+#Conclusion
+We have explored the three-level hierarchical model proposed by Berry $\&$ Berry, and tried to fit different datasets into the model. Both R and OpenBUGS give similar outcomes when it comes to estimating the posterior probabilities.
+
+
+Although we did not show for every dataset in every model, the model generally converges quite well. (The R package does not provide convergence check).
+
+
+In the mean time, we particularly compared the results between fitting the hierarchical model and the independent model. We conclude that the hierarchical model is more conservative when it comes to attributing the adverse effects to the effect of treatment, due to the consideration of body system effect.
+
+
+Finally, it seems that we could not reproduce the exact same estimate on the data provided in the reference paper. However both our OpenBUGS and R program return similar results to each other. We argue that the difference than the original publication might due to the change of computational software over a time period of more than a decade.
+
